@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security config that allows user-installed certificates (useful for development with self-signed CA).
+  IMPORTANT: For production, restrict trust anchors and avoid trusting user certificates unless you understand the implications.
+-->
+<network-security-config>
+    <base-config>
+        <trust-anchors>
+            <!-- Trust system CAs -->
+            <certificates src="system" />
+            <!-- Also trust user-installed CAs (handy for dev with self-signed certs) -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <!-- You can add domain-specific overrides here -->
+</network-security-config>

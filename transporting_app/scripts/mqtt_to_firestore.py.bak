@@ -1,0 +1,83 @@
+import paho.mqtt.client as mqtt
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+import json
+import time
+
+# --- CẤU HÌNH ---
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
+MQTT_TOPIC = "ammo_transport/+/telemetry" # Lắng nghe TẤT CẢ thiết bị
+
+# Đường dẫn tới key bạn đã tải về (để chung thư mục)
+CRED_PATH = 'scripts/serviceAccountKey.json' 
+
+# --- KHỞI TẠO FIREBASE ---
+try:
+    cred = credentials.Certificate(CRED_PATH)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Đã kết nối tới Firestore thành công!")
+except Exception as e:
+    print(f"❌ LỖI: Không thể kết nối Firestore. Hãy chắc chắn file '{CRED_PATH}' tồn tại.")
+    print(f"Lỗi chi tiết: {e}")
+    exit()
+
+# --- MQTT FUNCTIONS ---
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print(f"✅ Đã kết nối tới MQTT Broker tại {MQTT_BROKER}")
+        client.subscribe(MQTT_TOPIC)
+        print(f"    -> Đang lắng nghe topic: {MQTT_TOPIC}")
+    else:
+        print(f"❌ Kết nối MQTT thất bại, mã lỗi: {rc}")
+
+def on_message(client, userdata, msg):
+    try:
+        payload_str = msg.payload.decode('utf-8')
+        data = json.loads(payload_str)
+        
+        # Lấy device_id từ JSON
+        device_id = data.get('device_id')
+        if not device_id:
+            print("⚠️ Nhận được tin nhắn nhưng thiếu 'device_id'. Bỏ qua.")
+            return
+
+        # --- CHUẨN BỊ GHI VÀO FIRESTORE ---
+        
+        # 1. Chuyển GPS (lat/lng) thành GeoPoint của Firestore
+        if 'gps' in data and 'lat' in data['gps'] and 'lng' in data['gps']:
+            data['location'] = firestore.GeoPoint(data['gps']['lat'], data['gps']['lng'])
+            del data['gps'] # Xóa 'gps' cũ đi cho gọn
+        
+        # 2. Thêm timestamp của server (để biết khi nào nhận được)
+        data['last_updated'] = firestore.SERVER_TIMESTAMP
+        
+        # 3. Ghi vào Firestore
+        # Chúng ta dùng 'set' thay vì 'add' để nó tự động *cập nhật*
+        # tài liệu của thiết bị đó, thay vì tạo mới mỗi lần.
+        doc_ref = db.collection('devices').document(device_id)
+        doc_ref.set(data, merge=True) # merge=True để chỉ cập nhật, không ghi đè
+        
+        print(f"📡 Đã nhận và ghi dữ liệu cho: {device_id}")
+
+    except json.JSONDecodeError:
+        print(f"⚠️ Lỗi: Không thể decode JSON: {msg.payload.decode('utf-8')}")
+    except Exception as e:
+        print(f"❌ Lỗi khi xử lý tin nhắn: {e}")
+
+# --- KHỞI CHẠY ---
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+
+try:
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    print("⏳ Script cầu nối (MQTT -> Firestore) đang chạy...")
+    print("   Nhấn Ctrl+C để dừng.")
+    client.loop_forever()
+except KeyboardInterrupt:
+    print("\n🛑 Đã dừng script.")
+except Exception as e:
+    print(f"❌ Lỗi kết nối MQTT: {e}")

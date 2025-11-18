@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "797562607983",
+    "project_id": "iot-transportation-monitoring",
+    "storage_bucket": "iot-transportation-monitoring.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:797562607983:android:a04ddf11b97a8eac63f09a",
+        "android_client_info": {
+          "package_name": "com.example.transporting_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD23Mqp9t5H07tu9ajWgpfjRL3xpb8OCMQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
