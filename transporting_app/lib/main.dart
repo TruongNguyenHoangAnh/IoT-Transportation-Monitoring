@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'screens/dashboard_screen.dart'; // Import màn hình dashboard
+//import 'screens/dashboard_screen.dart'; // Import màn hình dashboard
+import 'screens/login.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -21,7 +22,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: DashboardScreen(), // Đặt DashboardScreen làm màn hình chính
+      home: LoginScreen(), // Đặt DashboardScreen làm màn hình chính
     );
   }
 }
