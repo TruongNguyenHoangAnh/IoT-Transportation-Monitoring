@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../notification/notification_screen.dart';
 
 class HeaderSection extends StatelessWidget {
   const HeaderSection({super.key});
@@ -26,7 +27,14 @@ class HeaderSection extends StatelessWidget {
         const Spacer(),
         IconButton(
           icon: const Icon(Icons.notifications_none, size: 30),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const NotificationScreen(),
+              ),
+            );
+          },
         )
       ],
     );

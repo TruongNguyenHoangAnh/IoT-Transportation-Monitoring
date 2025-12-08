@@ -8,8 +8,8 @@ import 'widgets/transport_card.dart';
 import 'widgets/alert_card.dart';
 import 'widgets/home_navbar.dart';
 
-// Màn Today's Transport (để mở khi bấm vào TransportCard)
 import '../transport/today_transport_screen.dart';
+import '../alert/today_alert_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,7 +62,19 @@ class _HomeScreenState extends State<HomeScreen> {
               const TransportCard(),
               const SizedBox(height: 20),
 
-              SectionHeader(title: "Today's Alert", count: 2),
+              SectionHeader(
+                title: "Today's Alert",
+                count: 2,
+                onViewAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TodayAlertScreen(),
+                    ),
+                  );
+                },
+              ),
+
               const SizedBox(height: 10),
               const AlertCard(alertTime: "02:00 AM"),
               const SizedBox(height: 12),
