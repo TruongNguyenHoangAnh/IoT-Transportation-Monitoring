@@ -1,178 +1,283 @@
 import 'package:flutter/material.dart';
-// --- BỎ IMPORT MQTT, THÊM 2 DÒNG NÀY ---
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/transport_data.dart';
-// ---
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Tạo một Stream để lắng nghe collection 'devices' từ FIRESTORE
-  final Stream<QuerySnapshot> _devicesStream = FirebaseFirestore.instance
-      .collection('devices')
-      .snapshots();
-
-  @override
-  void initState() {
-    super.initState();
-    // Không cần _setupMqtt() nữa!
-  }
+  final Stream<QuerySnapshot> _devicesStream =
+      FirebaseFirestore.instance.collection('devices').snapshots();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Giám sát (Firestore)"),
-        backgroundColor: Colors.indigo,
-      ),
-      backgroundColor: Colors.grey[200],
-      // Dùng StreamBuilder để tự động cập nhật UI khi Firestore có data mới
+      backgroundColor: Colors.white,
       body: StreamBuilder<QuerySnapshot>(
         stream: _devicesStream,
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          // Xử lý lỗi
+        builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Đã xảy ra lỗi: ${snapshot.error}'));
+            return Center(child: Text("Lỗi: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          // Đang tải...
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
+          final devices = snapshot.data!.docs
+              .map((doc) => TransportData.fromFirestore(doc))
+              .toList();
 
-          // Không có dữ liệu
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text("Không có thiết bị nào đang hoạt động."));
-          }
+          final total = devices.length;
+          final active = devices.where((d) => d.isActive).length;
+          final offline = total - active;
+          final critical = devices.where((d) => d.isCritical).length;
 
-          // Có dữ liệu -> Hiển thị bằng ListView
-          return ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
-              // Parse dữ liệu bằng model mới (từ file transport_data.dart mới)
-              TransportData data = TransportData.fromFirestore(document);
+          final List<double> alertChart = [
+            12,
+            20,
+            18,
+            25,
+            30,
+            critical.toDouble()
+          ];
 
-              // Chuyển Timestamp thành String ("... phút trước")
-              String lastUpdate = TimeAgo.getTimeAgo(data.timestamp);
-
-              // Hiển thị card thông tin
-              return Card(
-                elevation: 4,
-                margin: EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data.deviceId,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.indigo,
-                        ),
-                      ),
-                      Text(
-                        "Cập nhật: $lastUpdate",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      Divider(height: 20, thickness: 1),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoCell(
-                              "Nhiệt độ",
-                              "${data.temperature.toStringAsFixed(1)} °C",
-                              Icons.thermostat_outlined,
-                              Colors.redAccent,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: _buildInfoCell(
-                              "Pin",
-                              "${data.battery.toStringAsFixed(2)} V",
-                              Icons.battery_charging_full,
-                              Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoCell(
-                        "Vị trí GPS",
-                        "${data.latitude.toStringAsFixed(4)}, ${data.longitude.toStringAsFixed(4)}",
-                        Icons.location_on,
-                        Colors.blue,
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoCell(
-                        "Tín hiệu (RSSI)",
-                        "${data.rssi} dBm",
-                        Icons.signal_cellular_alt,
-                        Colors.orange,
-                      ),
-                    ],
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Dashboard",
+                    style: TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold),
                   ),
-                ),
-              );
-            }).toList(),
+                  const Text(
+                    "Real-time IoT Transportation Monitoring",
+                    style: TextStyle(color: Colors.black54),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _sectionCard(
+                    title: "System Overview",
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                                child: _overviewItem(
+                                    Icons.local_shipping,
+                                    "Total devices",
+                                    "$total")),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: _overviewItem(
+                                    Icons.play_circle,
+                                    "Active",
+                                    "$active")),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                                child: _overviewItem(
+                                    Icons.phonelink_off,
+                                    "Offline",
+                                    "$offline")),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: _overviewItem(
+                                    Icons.warning,
+                                    "Critical",
+                                    "$critical")),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _sectionCard(
+                    title: "Transport Status",
+                    child: SizedBox(
+                      height: 160,
+                      child: CustomPaint(
+                        painter: DonutPainter(
+                          activeCount: active,
+                          offlineCount: offline,
+                          criticalCount: critical,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _sectionCard(
+                    title: "Alert Trends",
+                    child: SizedBox(
+                      height: 180,
+                      child: CustomPaint(
+                        painter: LineChartPainter(alertChart),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
     );
   }
 
-  // Widget helper để vẽ các ô thông tin
-  Widget _buildInfoCell(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Row(
-      children: [
-        Icon(icon, size: 30, color: color),
-        SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: TextStyle(fontSize: 14, color: Colors.black54)),
-            Text(
-              value,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  Widget _sectionCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-      ],
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _overviewItem(IconData icon, String title, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 26),
+          const SizedBox(width: 10),
+          Text("$title\n$value"),
+        ],
+      ),
     );
   }
 }
 
-// Class helper nhỏ để hiển thị "xx phút trước"
-class TimeAgo {
-  static String getTimeAgo(Timestamp timestamp) {
-    final Duration diff = DateTime.now().difference(timestamp.toDate());
-    if (diff.inSeconds < 60) {
-      return "${diff.inSeconds} giây trước";
-    } else if (diff.inMinutes < 60) {
-      return "${diff.inMinutes} phút trước";
-    } else if (diff.inHours < 24) {
-      return "${diff.inHours} giờ trước";
-    } else {
-      return "${diff.inDays} ngày trước";
+// =======================================================
+// 🎯 CHARTS
+// =======================================================
+
+class DonutPainter extends CustomPainter {
+  final int activeCount;
+  final int offlineCount;
+  final int criticalCount;
+
+  DonutPainter({
+    required this.activeCount,
+    required this.offlineCount,
+    required this.criticalCount,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double total =
+        (activeCount + offlineCount + criticalCount).toDouble();
+    if (total == 0) total = 1;
+
+    const stroke = 22.0;
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    const startAngle = -1.57;
+
+    final paints = [
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = Colors.green,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = Colors.grey,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = Colors.redAccent,
+    ];
+
+    double currentAngle = startAngle;
+
+    for (final entry in [
+      activeCount,
+      offlineCount,
+      criticalCount
+    ]) {
+      final sweep = 3.14 * (entry / total);
+      canvas.drawArc(rect, currentAngle, sweep, false,
+          paints.removeAt(0));
+      currentAngle += sweep;
     }
   }
+
+  @override
+  bool shouldRepaint(_) => true;
+}
+
+class LineChartPainter extends CustomPainter {
+  final List<double> points;
+
+  LineChartPainter(this.points);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paintLine = Paint()
+      ..color = Colors.blue
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    final paintPoint = Paint()
+      ..color = Colors.black;
+
+    const padding = 20.0;
+    final step =
+        (size.width - padding * 2) / (points.length - 1);
+
+    final path = Path();
+
+    for (int i = 0; i < points.length; i++) {
+      final x = padding + step * i;
+      final y = size.height - padding - points[i];
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+
+      canvas.drawCircle(Offset(x, y), 4, paintPoint);
+    }
+
+    canvas.drawPath(path, paintLine);
+  }
+
+  @override
+  bool shouldRepaint(_) => true;
 }

@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../models/transport_data.dart';
 
 class TransportDetailScreen extends StatelessWidget {
-  const TransportDetailScreen({super.key});
+  final TransportData data;
+
+  const TransportDetailScreen({
+    super.key,
+    required this.data,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,18 +26,12 @@ class TransportDetailScreen extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const SizedBox(height: 10),
-
-            // ------------------ MAIN CARD ------------------
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -47,122 +47,76 @@ class TransportDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
+                  /// HEADER
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.local_shipping,
-                            color: Colors.blue, size: 26),
-                      ),
+                      const Icon(Icons.local_shipping,
+                          color: Colors.blue, size: 30),
                       const SizedBox(width: 12),
-
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          "Car Name: A12\nTransport ID: T-634F",
-                          style: TextStyle(
+                          "Device ID: ${data.deviceId}",
+                          style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w600),
                         ),
                       ),
-
-                      const Text("02:00 AM",
-                          style: TextStyle(color: Colors.black54)),
+                      Text(
+                        "${data.lastUpdated.toDate().hour.toString().padLeft(2, '0')}:"
+                        "${data.lastUpdated.toDate().minute.toString().padLeft(2, '0')}",
+                        style: const TextStyle(color: Colors.black54),
+                      ),
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  _divider(),
 
-                  // ------------------ GENERAL INFO ------------------
-                  const Text(
-                    "General information",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        fontSize: 15),
+                  const Text("General Information",
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+
+                  _infoRow(
+                    Icons.location_on,
+                    "Location",
+                    "${data.latitude}, ${data.longitude}",
                   ),
-                  const SizedBox(height: 8),
 
-                  _infoRow(Icons.location_on, "Current Location",
-                      "10°25'43.59\"N 106°48'24.37\"E"),
-
-                  _infoRow(Icons.inventory_2, "Cargo", "Bulk"),
-                  _infoRow(Icons.info, "Status", "Normal"),
-                  _infoRow(Icons.person, "Driver", "Nguyen Van A"),
+                  _infoRow(
+                    Icons.info,
+                    "Status",
+                    data.isActive ? "Active" : "Offline",
+                  ),
 
                   _divider(),
 
-                  // ------------------ SENSOR DATA ------------------
-                  const Text(
-                    "Sensor data",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
+                  const Text("Sensor Data",
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
 
-                  _infoRow(Icons.thermostat, "Temperature", "23.4°C"),
-                  _infoRow(Icons.water_drop, "Humidity", "55%"),
-                  _infoRow(Icons.vibration, "Vibration", "1.25"),
+                  _infoRow(
+                      Icons.thermostat,
+                      "Temperature",
+                      "${data.temperature} °C"),
 
-                  _divider(),
+                  _infoRow(Icons.battery_full, "Battery",
+                      "${data.battery} %"),
 
-                  // ------------------ CONNECTIVITY ------------------
-                  const Text(
-                    "Device Connectivity",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
-
-                  _infoRow(Icons.network_cell, "Signal Strength (RSSI)", "-45.0"),
-                  _infoRow(Icons.network_check, "Signal Noise Ratio (SNR)", "5.2"),
+                  _infoRow(
+                      Icons.network_cell,
+                      "RSSI",
+                      "${data.rssi} dBm"),
 
                   _divider(),
 
-                  // ------------------ ALERTS ------------------
-                  const Text(
-                    "Sensor Data",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        fontSize: 15),
-                  ),
-                  const SizedBox(height: 10),
+                  const Text("Alerts",
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
 
-                  _alertItem("Alert 1"),
-                  const SizedBox(height: 6),
-                  _alertItem("Alert 2"),
+                  const SizedBox(height: 8),
 
-                  const SizedBox(height: 20),
-
-                  // ------------------ VIEW ROUTE BUTTON ------------------
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "View Route",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16),
-                      ),
-                    ),
-                  )
+                  if (data.isCritical)
+                    _alertItem("⚠ Critical condition detected")
+                  else
+                    _alertItem("No alerts"),
                 ],
               ),
             ),
@@ -172,8 +126,6 @@ class TransportDetailScreen extends StatelessWidget {
     );
   }
 
-  // ----------- HELPER WIDGETS -----------
-
   Widget _infoRow(IconData icon, String title, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -181,13 +133,9 @@ class TransportDetailScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: Colors.blue),
           const SizedBox(width: 12),
-          Text(
-            "$title: ",
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          Expanded(
-            child: Text(value, style: const TextStyle(color: Colors.black87)),
-          )
+          Text("$title: ",
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          Expanded(child: Text(value)),
         ],
       ),
     );

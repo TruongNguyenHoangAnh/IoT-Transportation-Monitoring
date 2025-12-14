@@ -12,6 +12,7 @@ import '../transport/today_transport_screen.dart';
 import '../alert/today_alert_screen.dart';
 import '../map/map_screen.dart'; 
 import '../dashboard/dashboard_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _HomeContent(),
     MapScreen(),
     DashboardScreen(), // Dashboard
-    Placeholder(), // Profile
+    ProfileScreen(), // Profile
   ];
 
   @override

@@ -16,7 +16,12 @@ from logging.handlers import RotatingFileHandler
 MQTT_BROKER = os.environ.get("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
 MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "ammo_transport/+/telemetry")
-CRED_PATH = os.environ.get("CRED_PATH", "scripts/serviceAccountKey.json")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CRED_PATH = os.environ.get(
+    "CRED_PATH",
+    os.path.join(BASE_DIR, "serviceAccountKey.json")
+)
 
 # Cấu hình LOGGING 
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')

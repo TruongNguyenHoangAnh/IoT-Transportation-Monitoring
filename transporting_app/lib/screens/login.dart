@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import './auth/register_screen.dart';
 import 'forgot_password.dart';
 import 'home/home.dart';
 
@@ -11,6 +14,47 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool obscurePassword = true;
+
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  bool isLoading = false;
+
+  Future<void> login() async {
+    setState(() => isLoading = true);
+
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      // Thành công → chuyển trang
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } catch (e) {
+      // Lỗi → hiện dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Login Failed"),
+          content: Text(e.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Email
                 TextField(
+                  controller: emailController,
                   decoration: InputDecoration(
                     labelText: "Email",
                     border: OutlineInputBorder(
@@ -44,6 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Password
                 TextField(
+                  controller: passwordController,
                   obscureText: obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Password",
@@ -82,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       "Forgot password?",
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black,   // ← màu đen
+                        color: Colors.black,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -102,26 +148,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HomeScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "Log in",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,         // ← chữ trắng
-                        fontWeight: FontWeight.bold, // ← in đậm
-                      ),
-                    ),
+                    onPressed: isLoading ? null : login,
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Log in",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // OR line
                 Row(
                   children: [
                     Expanded(child: Divider(thickness: 0.8)),
@@ -135,7 +177,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // Sign up button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -146,13 +187,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
+                      );
+                    },
                     child: const Text(
                       "Sign up",
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.black87,
-                        fontWeight: FontWeight.bold,   // ← in đậm
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
