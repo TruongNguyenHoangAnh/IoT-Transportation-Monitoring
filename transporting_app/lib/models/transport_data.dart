@@ -23,7 +23,7 @@ class TransportData {
     final data = doc.data() as Map<String, dynamic>;
 
     final GeoPoint location =
-        data['rental'] ?? const GeoPoint(0, 0);
+        data['location'] as GeoPoint? ?? const GeoPoint(0, 0);
 
     return TransportData(
       deviceId: data['device_id'] ?? doc.id,

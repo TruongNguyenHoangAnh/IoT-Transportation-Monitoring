@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/transport_data.dart';
 import '../transport/transport_detail_screen.dart';
@@ -34,9 +35,7 @@ class _MapScreenState extends State<MapScreen> {
 
       // ================= FIRESTORE STREAM =================
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('devices')
-            .snapshots(),
+        stream: FirebaseFirestore.instance.collection('devices').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -51,19 +50,18 @@ class _MapScreenState extends State<MapScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final List<TransportData> devices = snapshot.data!.docs
+          final devices = snapshot.data!.docs
               .map((doc) => TransportData.fromFirestore(doc))
               .toList();
 
           return SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // ================= MAP =================
                 Container(
                   height: 260,
-                  margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
@@ -95,7 +93,10 @@ class _MapScreenState extends State<MapScreen> {
 
                           // ================= MARKERS =================
                           MarkerLayer(
-                            markers: devices.map((device) {
+                            markers: devices
+                                .where((d) =>
+                                    d.latitude != 0 && d.longitude != 0)
+                                .map((device) {
                               return Marker(
                                 point: LatLng(
                                   device.latitude,
@@ -151,8 +152,6 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 10),
-
                 // ================= LEGEND =================
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -166,7 +165,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 20),
 
                 // ================= TRANSPORT LIST =================
-                ...devices.map(_buildTransportCard).toList(),
+                ...devices.map(_buildTransportCard),
 
                 const SizedBox(height: 30),
               ],
@@ -240,6 +239,9 @@ class _MapScreenState extends State<MapScreen> {
 
   // ================= TRANSPORT CARD =================
   Widget _buildTransportCard(TransportData device) {
+    final date = device.lastUpdated.toDate();
+    final formattedTime = DateFormat('MMM d, HH:mm').format(date);
+
     return Container(
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
@@ -270,7 +272,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               Text(
-                "${device.lastUpdated.toDate().hour.toString().padLeft(2, '0')}:${device.lastUpdated.toDate().minute.toString().padLeft(2, '0')}",
+                formattedTime, // ✅ Dec 17, 14:21
                 style: const TextStyle(color: Colors.black54),
               ),
             ],
@@ -285,8 +287,8 @@ class _MapScreenState extends State<MapScreen> {
           const SizedBox(height: 6),
 
           Text(
-            "Location: ${device.latitude.toStringAsFixed(4)}, ${device.longitude.toStringAsFixed(4)}",
-            style: const TextStyle(color: Colors.black87),
+            "Location: ${device.latitude.toStringAsFixed(4)}, "
+            "${device.longitude.toStringAsFixed(4)}",
           ),
 
           const SizedBox(height: 12),
@@ -295,12 +297,10 @@ class _MapScreenState extends State<MapScreen> {
             alignment: Alignment.centerRight,
             child: ElevatedButton(
               onPressed: () {
-                // ====== FIX LỖI missing_required_argument ======
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        TransportDetailScreen(data: device),
+                    builder: (_) => TransportDetailScreen(data: device),
                   ),
                 );
               },

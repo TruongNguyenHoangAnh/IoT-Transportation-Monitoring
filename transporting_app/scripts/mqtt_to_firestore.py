@@ -13,15 +13,18 @@ import queue
 from logging.handlers import RotatingFileHandler
 
 # Đọc từ biến môi trường
-MQTT_BROKER = os.environ.get("MQTT_BROKER", "localhost")
+MQTT_BROKER = os.environ.get("MQTT_BROKER", "10.118.227.207")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
 MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "ammo_transport/+/telemetry")
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-CRED_PATH = os.environ.get(
-    "CRED_PATH",
-    os.path.join(BASE_DIR, "serviceAccountKey.json")
-)
+# Resolve credential path: prefer environment variable; if it's a relative path, resolve it
+# relative to the script file directory. Default to 'serviceAccountKey.json' located in
+# the same 'scripts' directory as this script.
+_script_dir = os.path.dirname(__file__)
+_env_cred = os.environ.get("CRED_PATH")
+if _env_cred:
+    CRED_PATH = _env_cred if os.path.isabs(_env_cred) else os.path.abspath(os.path.join(_script_dir, _env_cred))
+else:
+    CRED_PATH = os.path.abspath(os.path.join(_script_dir, 'serviceAccountKey.json'))
 
 # Cấu hình LOGGING 
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
