@@ -114,9 +114,20 @@ def commit_with_retry(batch, max_attempts=5):
             time.sleep(delay + random.random())
             delay = min(delay * 2, 30)
 
+
+def _looks_like_complete_json(raw_str):
+    """Best-effort guard to skip truncated frames that break JSON parsing."""
+    if not isinstance(raw_str, str):
+        return False
+    trimmed = raw_str.strip()
+    if not (trimmed.startswith('{') and trimmed.endswith('}')):
+        return False
+    return trimmed.count('{') == trimmed.count('}')
+
 # --- CÁC HÀM XỬ LÝ MQTT (Main Thread) ---
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, reason_code, properties=None):
+    rc = getattr(reason_code, "value", reason_code)
     if rc == 0:
         logger.info(f"Đã kết nối tới MQTT Broker tại {MQTT_BROKER}")
         client.subscribe(MQTT_TOPIC)
@@ -133,6 +144,9 @@ def on_message(client, userdata, msg):
         if 'raw' in data and ('rssi' in data or 'snr' in data):
             try:
                 raw_string = data.get('raw')
+                if not _looks_like_complete_json(raw_string):
+                    logger.debug("Bỏ qua frame RAW vì có dấu hiệu chưa hoàn chỉnh.")
+                    return
                 processed_data = json.loads(raw_string)
                 
                 processed_data['gateway_rssi'] = data.get('rssi')
@@ -198,7 +212,7 @@ def _graceful_shutdown(signum=None, frame=None):
 worker = threading.Thread(target=firestore_worker, daemon=True)
 worker.start()
 
-client = mqtt.Client(client_id=f"mqtt_to_firestore_bridge_{os.getpid()}_{random.randint(0,9999)}")
+client = mqtt.Client(client_id=f"mqtt_to_firestore_bridge_{os.getpid()}_{random.randint(0,9999)}", callback_api_version=mqtt.CallbackAPIVersion.VERSION2,)
 client.on_connect = on_connect
 client.on_message = on_message
 client.on_disconnect = on_disconnect
