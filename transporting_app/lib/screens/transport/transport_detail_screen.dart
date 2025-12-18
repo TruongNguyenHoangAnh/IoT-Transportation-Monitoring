@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../models/transport_data.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TransportDetailScreen extends StatelessWidget {
   final TransportData data;
+  Stream<DocumentSnapshot<Map<String, dynamic>>> alertStream(String deviceId) {
+    return FirebaseFirestore.instance
+        .collection('alerts')
+        .doc(deviceId)
+        .snapshots();
+  }
 
   const TransportDetailScreen({
     super.key,
@@ -113,10 +120,48 @@ class TransportDetailScreen extends StatelessWidget {
 
                   const SizedBox(height: 8),
 
-                  if (data.isCritical)
-                    _alertItem("⚠ Critical condition detected")
-                  else
-                    _alertItem("No alerts"),
+                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: alertStream(data.deviceId),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData || !snapshot.data!.exists) {
+                        return _alertItem("No alerts");
+                      }
+
+                      final alertData = snapshot.data!.data()!;
+                      final bool isAlert = alertData['is_alert'] ?? false;
+
+                      if (!isAlert) {
+                        return _alertItem("No alerts");
+                      }
+
+                      final String message =
+                          alertData['message'] ?? "⚠ Alert detected";
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning, color: Colors.red),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                message,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
                 ],
               ),
             ),

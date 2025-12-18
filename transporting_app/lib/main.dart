@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 
-// 📌 Các màn hình của app
+// Screens
 import 'screens/login.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/edit_profile_screen.dart';
@@ -31,21 +31,24 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
       title: 'IoT Monitor',
       debugShowCheckedModeBanner: false,
 
       // =============================
-      // 🌙 Theme toàn app
+      // LIGHT THEME
       // =============================
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
         primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.white,
       ),
 
+      // =============================
+      // DARK THEME
+      // =============================
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
@@ -54,10 +57,12 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
+      themeMode: themeProvider.isDark
+          ? ThemeMode.dark
+          : ThemeMode.light,
 
       // =============================
-      // 🚀 App Routes
+      // ROUTES
       // =============================
       home: const LoginScreen(),
 
